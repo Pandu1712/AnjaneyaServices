@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper: Check if user is logged in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Helper: Get user profile data
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    // Helper: Check if user is an Admin
+    function isAdmin() {
+      return isSignedIn() && getUserData().role == 'admin';
+    }
+
+    // --- Collection Rules ---
+
+    // Services & Locations: Anyone can view, only Admins can edit
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /locations/{locationId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Users: Users can read/write their own profile, Admins can see all
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+    
+    // Bookings: 
+    // - Users can create bookings and see their own
+    // - Providers can see bookings assigned to them
+    // - Admins can see and edit everything
+    match /bookings/{bookingId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.providerId == request.auth.uid || 
+        isAdmin()
+      );
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.providerId == request.auth.uid || 
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+  }
+}

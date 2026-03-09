@@ -1,0 +1,5 @@
+{
+  "name": "Anjaneya Services",
+  "description": "Full-stack home service booking platform with Admin, User, and Service Provider modules.",
+  "requestFramePermissions": ["geolocation"]
+}
